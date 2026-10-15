@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#635bdb">
+  <title>Chatbot của tôi</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; padding: 16px;
+      display: grid; place-items: center;
+      font-family: system-ui, -apple-system, Segoe UI, sans-serif;
+      background: linear-gradient(135deg, #dbeafe, #f3e8ff);
+      color: #20213a;
+    }
+    .app {
+      width: min(100%, 480px); height: min(760px, 92vh); min-height: 480px;
+      background: #fff; border-radius: 24px; overflow: hidden;
+      box-shadow: 0 20px 60px #25205b24;
+      display: flex; flex-direction: column;
+    }
+    header {
+      padding: 20px; color: white; background: linear-gradient(135deg, #6d63e8, #5147c9);
+      display: flex; align-items: center; gap: 13px;
+    }
+    .avatar {
+      width: 48px; height: 48px; border-radius: 16px; display: grid;
+      place-items: center; background: #ffffff25; font-size: 27px;
+    }
+    header h1 { font-size: 19px; margin: 0 0 4px; }
+    header p { margin: 0; font-size: 13px; opacity: .9; }
+    #chat {
+      flex: 1; overflow-y: auto; padding: 18px; background: #fafaff;
+      display: flex; flex-direction: column; gap: 12px;
+    }
+    .message {
+      max-width: 86%; padding: 12px 14px; border-radius: 17px;
+      white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.5;
+    }
+    .bot { align-self: flex-start; background: #eeedff; border-bottom-left-radius: 5px; }
+    .user { align-self: flex-end; background: #6259dc; color: white; border-bottom-right-radius: 5px; }
+    .suggestions { padding: 10px 14px; display: flex; gap: 8px; flex-wrap: wrap; background: #fafaff; }
+    .suggestions button {
+      border: 1px solid #d9d5ff; color: #5147c9; background: white;
+      border-radius: 18px; padding: 8px 11px; cursor: pointer;
+    }
+    .suggestions button:hover { background: #eeedff; }
+    form { display: flex; gap: 9px; padding: 13px; border-top: 1px solid #eeeef5; }
+    input {
+      flex: 1; min-width: 0; border: 1px solid #d8d8e5; border-radius: 24px;
+      padding: 12px 15px; font-size: 16px; outline: none;
+    }
+    input:focus { border-color: #6259dc; box-shadow: 0 0 0 3px #6259dc18; }
+    #send {
+      border: 0; border-radius: 50%; width: 46px; height: 46px;
+      background: #6259dc; color: white; font-size: 20px; cursor: pointer;
+    }
+    .note { text-align: center; padding: 0 10px 10px; color: #888; font-size: 11px; }
+    @media (max-width: 520px) {
+      body { padding: 0; }
+      .app { height: 100dvh; min-height: 0; border-radius: 0; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header>
+      <div class="avatar" aria-hidden="true">🤖</div>
+      <div>
+        <h1>Chatbot của tôi</h1>
+        <p>● Sẵn sàng trò chuyện</p>
+      </div>
+    </header>
+    <section id="chat" aria-live="polite" aria-label="Tin nhắn"></section>
+    <div class="suggestions" aria-label="Câu hỏi gợi ý">
+      <button type="button" data-question="Xin chào">👋 Xin chào</button>
+      <button type="button" data-question="Bạn tên gì?">🤖 Bạn tên gì?</button>
+      <button type="button" data-question="Bạn làm được gì?">❓ Trợ giúp</button>
+    </div>
+    <form id="form">
+      <input id="input" maxlength="500" autocomplete="off" placeholder="Nhập tin nhắn..." aria-label="Nhập tin nhắn" required>
+      <button id="send" type="submit" aria-label="Gửi">➤</button>
+    </form>
+    <div class="note">Chatbot quy tắc cơ bản • Tin nhắn không được lưu</div>
+  </main>
+  <script>
+    const chat = document.getElementById("chat");
+    const input = document.getElementById("input");
+    const form = document.getElementById("form");
+
+    // Thêm hoặc sửa quy tắc trả lời tại danh sách này.
+    const rules = [
+      { keys: ["xin chao", "chao ban", "hello", "hi"], answer: "Xin chào! 👋 Rất vui được trò chuyện với bạn. Bạn cần mình giúp gì?" },
+      { keys: ["ban ten gi", "ten cua ban", "ban la ai"], answer: "Mình là Chatbot của bạn! 🤖 Bạn có thể đổi tên mình trong file index.html." },
+      { keys: ["ban lam duoc gi", "tro giup", "help", "chuc nang"], answer: "Mình có thể trả lời một số câu hỏi được lập trình sẵn.\n\nBạn thử hỏi:\n• Xin chào\n• Bạn tên gì?\n• Bạn thích gì?\n• Mấy giờ rồi?\n• Kể chuyện\n• Tạm biệt" },
+      { keys: ["ban thich gi", "so thich"], answer: "Mình thích giúp mọi người và trò chuyện vui vẻ! ✨" },
+      { keys: ["ban bao nhieu tuoi", "may tuoi"], answer: "Mình là chương trình máy tính nên không có tuổi như con người nhé! 😊" },
+      { keys: ["ban khoe khong", "ban the nao"], answer: "Mình đang hoạt động tốt! Cảm ơn bạn đã hỏi 😄" },
+      { keys: ["cam on", "thank you", "thanks"], answer: "Không có gì! 😊 Mình rất vui được giúp bạn." },
+      { keys: ["tam biet", "hen gap lai", "goodbye", "bye"], answer: "Tạm biệt nhé! 👋 Hẹn gặp lại bạn." },
+      { keys: ["ke chuyen", "mot cau chuyen"], answer: "Ngày xửa ngày xưa, có một chú robot nhỏ luôn giúp đỡ mọi người. Mỗi ngày, chú học thêm một điều mới và trở thành người bạn tuyệt vời của cả ngôi làng. 🤖✨" },
+      { keys: ["may gio roi", "bay gio la may gio", "gio hien tai"], answer: () => "Giờ trên thiết bị của bạn là " + new Date().toLocaleTimeString("vi-VN") + "." },
+      { keys: ["hom nay la ngay may", "ngay hom nay"], answer: () => "Ngày trên thiết bị của bạn là " + new Date().toLocaleDateString("vi-VN") + "." },
+      { keys: ["javascript la gi"], answer: "JavaScript là ngôn ngữ lập trình giúp website có các chức năng tương tác như chatbot này." },
+      { keys: ["one piece", "dao hai tac"], answer: "One Piece là bộ manga nổi tiếng của Eiichiro Oda! 🏴‍☠️ Bạn muốn trò chuyện về nhân vật nào?" }
+    ];
+
+    function normalize(text) {
+      return text.toLocaleLowerCase("vi-VN")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/đ/g, "d")
+        .replace(/[.,!?;:]/g, " ")
+        .replace(/\s+/g, " ").trim();
+    }
+
+    function addMessage(text, sender) {
+      const el = document.createElement("div");
+      el.className = "message " + sender;
+      el.textContent = text;
+      chat.appendChild(el);
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    function getReply(text) {
+      const question = normalize(text);
+      for (const rule of rules) {
+        if (rule.keys.some(key => {
+          const k = normalize(key);
+          return question === k || question.includes(k);
+        })) {
+          return typeof rule.answer === "function" ? rule.answer() : rule.answer;
+        }
+      }
+      return "Xin lỗi, mình chưa hiểu câu hỏi này. 🤔\nBạn thử hỏi “Bạn làm được gì?” hoặc chọn một câu hỏi gợi ý nhé!";
+    }
+
+    function send(text) {
+      const value = text.trim();
+      if (!value) return;
+      addMessage(value, "user");
+      addMessage(getReply(value), "bot");
+    }
+
+    form.addEventListener("submit", event => {
+      event.preventDefault();
+      send(input.value);
+      input.value = "";
+      input.focus();
+    });
+
+    document.querySelectorAll("[data-question]").forEach(button => {
+      button.addEventListener("click", () => {
+        send(button.dataset.question);
+        input.focus();
+      });
+    });
+
+    addMessage("Xin chào! 👋 Mình là Chatbot của bạn.\nHãy nhập câu hỏi hoặc chọn một gợi ý bên dưới để bắt đầu nhé!", "bot");
+  </script>
+</body>
+</html>
